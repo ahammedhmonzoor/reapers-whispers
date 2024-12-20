@@ -89,11 +89,11 @@ const GameCell = styled(Paper)`
   border: 1px solid rgba(255, 0, 0, 0.3);
   backdrop-filter: blur(5px);
   transition: all 0.3s ease;
-  cursor: pointer;
+  cursor: ${props => props.isClickable ? 'pointer' : 'default'};
   
   &:hover {
-    background: rgba(255, 0, 0, 0.2);
-    border-color: rgba(255, 0, 0, 0.5);
+    background: ${props => props.isClickable ? 'rgba(255, 0, 0, 0.2)' : props.isActive ? 'rgba(255, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.7)'};
+    border-color: ${props => props.isClickable ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 0, 0, 0.3)'};
   }
   
   ${props => props.isActive && `
@@ -109,9 +109,20 @@ const GameCell = styled(Paper)`
       transform: translate(-50%, -50%);
       width: 20px;
       height: 20px;
-      background: #ff0000;
+      background: ${props.isReaper ? '#ff0000' : '#ffffff'};
       border-radius: 50%;
-      box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+      box-shadow: 0 0 10px ${props.isReaper ? 'rgba(255, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)'};
+      animation: ${flicker} 2s infinite;
+    }
+  `}
+
+  ${props => props.hasPowerUp && `
+    &::before {
+      content: '⭐';
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      color: #ffff00;
       animation: ${flicker} 2s infinite;
     }
   `}
@@ -136,7 +147,7 @@ const PlayerList = styled(Paper)`
 
 const StyledTypography = styled(Typography)`
   font-family: 'Creepster', cursive;
-  color: #ff0000;
+  color: ${props => props.color || '#ff0000'};
   text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
 `;
 
@@ -154,6 +165,11 @@ const StyledButton = styled(Button)`
     background-color: #cc0000;
     box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
   }
+
+  &:disabled {
+    background-color: #660000;
+    color: rgba(255, 255, 255, 0.5);
+  }
 `;
 
 function Game() {
@@ -167,7 +183,9 @@ function Game() {
     board: Array(16).fill(null),
     isGameStarted: false,
     currentTurn: null,
-    winner: null
+    winner: null,
+    gameOver: false,
+    powerUps: []
   });
   const [selectedCell, setSelectedCell] = useState(null);
   const [validMoves, setValidMoves] = useState([]);
@@ -175,19 +193,23 @@ function Game() {
   const [gameOverDialog, setGameOverDialog] = useState(false);
   const [powerUpDialog, setPowerUpDialog] = useState(false);
   const [availablePowerUps, setAvailablePowerUps] = useState([]);
+  const [isHost] = useState(location.state?.isHost || false);
 
   const username = location.state?.username;
-  const isReaper = gameState.players.find(p => p.username === username)?.isReaper;
+  const currentPlayer = gameState.players.find(p => p.username === username);
+  const isReaper = currentPlayer?.isReaper;
+  const isCurrentTurn = gameState.currentTurn === username;
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3001');
+    const serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+    const newSocket = io(serverUrl);
     setSocket(newSocket);
 
     newSocket.emit('joinGame', { gameId, username });
 
     newSocket.on('gameState', (state) => {
       setGameState(state);
-      if (state.winner) {
+      if (state.gameOver) {
         setGameOverDialog(true);
       }
     });
@@ -200,99 +222,109 @@ function Game() {
       setAvailablePowerUps(powerUps);
     });
 
-    newSocket.on('gameError', (error) => {
-      setAlert({ open: true, message: error, severity: 'error' });
+    newSocket.on('error', (error) => {
+      setAlert({
+        open: true,
+        message: error.message,
+        severity: 'error'
+      });
     });
 
-    return () => newSocket.disconnect();
+    return () => {
+      newSocket.disconnect();
+    };
   }, [gameId, username]);
 
   const handleCellClick = useCallback((index) => {
-    if (!gameState.isGameStarted || gameState.winner) return;
-    
-    const currentPlayer = gameState.players.find(p => p.username === username);
-    if (!currentPlayer || !currentPlayer.isAlive) return;
-    
-    if (gameState.currentTurn?.playerId !== currentPlayer.id) {
-      setAlert({ open: true, message: "It's not your turn!", severity: 'warning' });
-      return;
-    }
+    if (!isCurrentTurn || !validMoves.includes(index)) return;
 
-    if (validMoves.includes(index)) {
-      socket.emit('movePlayer', { gameId, position: index });
-      setSelectedCell(index);
-    } else if (currentPlayer.position === index) {
-      socket.emit('requestValidMoves', { gameId });
-    } else {
-      setAlert({ open: true, message: 'Invalid move!', severity: 'error' });
-    }
-  }, [gameState, username, validMoves, socket, gameId]);
+    socket.emit('movePlayer', {
+      gameId,
+      username,
+      position: index
+    });
 
-  const handleStartGame = useCallback(() => {
-    socket.emit('startGame', { gameId });
-  }, [socket, gameId]);
+    setSelectedCell(null);
+    setValidMoves([]);
+  }, [gameId, username, isCurrentTurn, validMoves, socket]);
 
-  const handleUsePowerUp = useCallback((powerUp) => {
-    socket.emit('usePowerUp', { gameId, powerUp });
+  const handlePowerUpUse = useCallback((powerUp) => {
+    if (!isCurrentTurn) return;
+
+    socket.emit('usePowerUp', {
+      gameId,
+      username,
+      powerUp
+    });
+
     setPowerUpDialog(false);
-  }, [socket, gameId]);
+  }, [gameId, username, isCurrentTurn, socket]);
 
-  const renderCell = useCallback((index) => {
-    const player = gameState.players.find(p => p.position === index && p.isAlive);
-    const isValidMove = validMoves.includes(index);
-    
-    return (
-      <GameCell
-        isActive={selectedCell === index || isValidMove}
-        isPlayer={!!player}
-        onClick={() => handleCellClick(index)}
-        sx={{
-          cursor: isValidMove ? 'pointer' : 'default',
-          '&::after': player && {
-            backgroundColor: player.isReaper ? '#ff0000' : '#ffffff',
-          }
-        }}
-      />
-    );
-  }, [gameState.players, selectedCell, validMoves, handleCellClick]);
+  const handleReturnToLobby = useCallback(() => {
+    if (isHost) {
+      socket.emit('resetGame', { gameId });
+    }
+    navigate(`/lobby/${gameId}`, { 
+      state: { 
+        username,
+        isHost
+      } 
+    });
+  }, [gameId, username, isHost, navigate, socket]);
+
+  const handleNewGame = useCallback(() => {
+    if (isHost) {
+      socket.emit('startNewGame', { gameId });
+      setGameOverDialog(false);
+    }
+  }, [gameId, isHost, socket]);
 
   return (
     <>
       <Background />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: 4, minHeight: '100vh' }}>
         <GameContainer>
-          <StyledTypography variant="h3" align="center" gutterBottom>
-            {isReaper ? "Reaper's Hunt" : "Survive the Reaper"}
-          </StyledTypography>
-          
-          <Grid container spacing={3}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <StyledTypography variant="h4">
+              {isReaper ? "You are the Reaper!" : "Survive the Night!"}
+            </StyledTypography>
+            <StyledTypography variant="h5">
+              {isCurrentTurn ? "Your Turn!" : `${gameState.currentTurn}'s Turn`}
+            </StyledTypography>
+          </Box>
+
+          <Grid container spacing={2}>
             <Grid item xs={12} md={8}>
               <Grid container spacing={1}>
-                {Array(16).fill(null).map((_, index) => (
+                {gameState.board.map((cell, index) => (
                   <Grid item xs={3} key={index}>
-                    {renderCell(index)}
+                    <GameCell
+                      isActive={selectedCell === index}
+                      isClickable={isCurrentTurn && validMoves.includes(index)}
+                      isPlayer={cell !== null}
+                      isReaper={cell?.isReaper}
+                      hasPowerUp={gameState.powerUps.includes(index)}
+                      onClick={() => handleCellClick(index)}
+                    />
                   </Grid>
                 ))}
               </Grid>
             </Grid>
-            
+
             <Grid item xs={12} md={4}>
               <PlayerList>
-                <StyledTypography variant="h5" gutterBottom>
+                <StyledTypography variant="h6" gutterBottom>
                   Players
                 </StyledTypography>
                 <List>
-                  {gameState.players.map((player, index) => (
-                    <ListItem key={index}>
-                      <ListItemText 
+                  {gameState.players.map((player) => (
+                    <ListItem key={player.username}>
+                      <ListItemText
                         primary={
-                          <StyledTypography
-                            sx={{
-                              color: !player.isAlive ? '#666' : player.isReaper ? '#ff0000' : '#fff',
-                              textDecoration: !player.isAlive ? 'line-through' : 'none',
-                            }}
-                          >
-                            {player.username} {!player.isAlive && '(Dead)'}
+                          <StyledTypography color={player.isReaper ? '#ff0000' : '#ffffff'}>
+                            {player.username}
+                            {player.isReaper ? ' (Reaper)' : ''}
+                            {gameState.currentTurn === player.username ? ' (Current Turn)' : ''}
                           </StyledTypography>
                         }
                       />
@@ -300,35 +332,15 @@ function Game() {
                   ))}
                 </List>
               </PlayerList>
-              
-              {gameState.currentTurn && (
-                <Box mt={3}>
-                  <StyledTypography align="center">
-                    {gameState.currentTurn.playerId === gameState.players.find(p => p.username === username)?.id
-                      ? "Your Turn!"
-                      : `${gameState.players.find(p => p.id === gameState.currentTurn.playerId)?.username}'s Turn`}
-                  </StyledTypography>
-                </Box>
-              )}
-              
-              {!gameState.isGameStarted && gameState.players[0]?.username === username && (
-                <Box mt={3} display="flex" justifyContent="center">
+
+              {currentPlayer?.powerUps?.length > 0 && (
+                <Box mt={2}>
                   <StyledButton
-                    variant="contained"
-                    onClick={handleStartGame}
-                  >
-                    Start Game
-                  </StyledButton>
-                </Box>
-              )}
-              
-              {gameState.isGameStarted && availablePowerUps.length > 0 && (
-                <Box mt={3} display="flex" justifyContent="center">
-                  <StyledButton
-                    variant="contained"
+                    fullWidth
                     onClick={() => setPowerUpDialog(true)}
+                    disabled={!isCurrentTurn}
                   >
-                    Use Power-up
+                    Use Power-Up
                   </StyledButton>
                 </Box>
               )}
@@ -337,57 +349,91 @@ function Game() {
         </GameContainer>
       </Container>
 
-      <Dialog open={gameOverDialog} onClose={() => navigate('/')}>
+      {/* Game Over Dialog */}
+      <Dialog
+        open={gameOverDialog}
+        onClose={() => {}}
+        PaperProps={{
+          style: {
+            backgroundColor: '#000000',
+            border: '1px solid rgba(255, 0, 0, 0.2)',
+          }
+        }}
+      >
         <DialogTitle>
-          <StyledTypography>
+          <StyledTypography variant="h5">
             Game Over!
           </StyledTypography>
         </DialogTitle>
         <DialogContent>
-          <StyledTypography>
+          <StyledTypography color="#fff" gutterBottom>
             {gameState.winner === 'reaper' 
-              ? 'The Reaper has won! All survivors have been eliminated.'
-              : 'The Survivors have won! They managed to survive the Reaper.'}
+              ? "The Reaper has claimed all souls!" 
+              : "The survivors have escaped the Reaper's grasp!"}
+          </StyledTypography>
+          <StyledTypography color="#fff">
+            Winner: {gameState.winner === 'reaper' ? 'The Reaper' : 'The Survivors'}
           </StyledTypography>
         </DialogContent>
         <DialogActions>
-          <StyledButton onClick={() => navigate('/')}>
-            Back to Lobby
+          {isHost && (
+            <StyledButton onClick={handleNewGame}>
+              Start New Game
+            </StyledButton>
+          )}
+          <StyledButton onClick={handleReturnToLobby}>
+            Return to Lobby
           </StyledButton>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={powerUpDialog} onClose={() => setPowerUpDialog(false)}>
+      {/* Power-Up Dialog */}
+      <Dialog
+        open={powerUpDialog}
+        onClose={() => setPowerUpDialog(false)}
+        PaperProps={{
+          style: {
+            backgroundColor: '#000000',
+            border: '1px solid rgba(255, 0, 0, 0.2)',
+          }
+        }}
+      >
         <DialogTitle>
-          <StyledTypography>
-            Use Power-up
+          <StyledTypography variant="h5">
+            Use Power-Up
           </StyledTypography>
         </DialogTitle>
         <DialogContent>
           <List>
-            {availablePowerUps.map((powerUp, index) => (
-              <ListItem key={index} button onClick={() => handleUsePowerUp(powerUp)}>
-                <ListItemText
-                  primary={
-                    <StyledTypography>
-                      {powerUp === 'shield' && '🛡️ Shield'}
-                      {powerUp === 'reveal' && '👁️ Reveal'}
-                      {powerUp === 'speed' && '⚡ Speed Boost'}
-                    </StyledTypography>
-                  }
-                />
+            {currentPlayer?.powerUps?.map((powerUp) => (
+              <ListItem key={powerUp}>
+                <StyledButton
+                  fullWidth
+                  onClick={() => handlePowerUpUse(powerUp)}
+                >
+                  {powerUp}
+                </StyledButton>
               </ListItem>
             ))}
           </List>
         </DialogContent>
       </Dialog>
 
+      {/* Alert Snackbar */}
       <Snackbar
         open={alert.open}
         autoHideDuration={3000}
         onClose={() => setAlert({ ...alert, open: false })}
       >
-        <Alert severity={alert.severity} sx={{ width: '100%' }}>
+        <Alert 
+          severity={alert.severity}
+          sx={{ 
+            backgroundColor: '#000000',
+            color: '#ff0000',
+            border: '1px solid rgba(255, 0, 0, 0.2)',
+            fontFamily: 'Creepster, cursive'
+          }}
+        >
           {alert.message}
         </Alert>
       </Snackbar>
