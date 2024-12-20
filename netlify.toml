@@ -1,7 +1,7 @@
 [build]
+  base = "/"
   command = "npm run build"
   publish = "build"
-  functions = "netlify/functions"
 
 [[redirects]]
   from = "/*"
@@ -10,3 +10,4 @@
 
 [context.production.environment]
   REACT_APP_SERVER_URL = "https://reapers-whispers-backend.onrender.com"
+  REACT_APP_SOCKET_URL = "wss://reapers-whispers-backend.onrender.com"
