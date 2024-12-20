@@ -18,23 +18,44 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          cache: 'npm'
+
+      - name: Debug Directory
+        run: |
+          pwd
+          ls -la
 
       - name: Install Dependencies
         run: |
-          npm install
-          cd server && npm install
+          npm ci
+          cd server && npm ci
           cd ..
 
+      - name: Debug Build Directory
+        run: |
+          ls -la
+          cat package.json
+
       - name: Build Frontend
-        run: npm run build
+        run: CI=false npm run build
         env:
           REACT_APP_SERVER_URL: https://reapers-whispers-backend.onrender.com
           REACT_APP_SOCKET_URL: wss://reapers-whispers-backend.onrender.com
 
+      - name: Debug Build Output
+        run: |
+          ls -la build || echo "Build directory not found"
+
       - name: Deploy to Netlify
-        uses: jsmrcaga/action-netlify-deploy@v2.0.0
+        uses: nwtgck/actions-netlify@v2.0
         with:
+          publish-dir: './build'
+          production-branch: main
+          deploy-message: "Deploy from GitHub Actions"
+          enable-pull-request-comment: false
+          enable-commit-comment: false
+          overwrites-pull-request-comment: false
+        env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_DEPLOY_TO_PROD: true
-          build_directory: build
+        timeout-minutes: 1
