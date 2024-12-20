@@ -37,7 +37,7 @@ const bannedPlayers = new Map();
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 io.on('connection', (socket) => {
