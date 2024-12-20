@@ -13,49 +13,48 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
 
-      - name: Debug Directory
+      - name: Debug Environment
         run: |
+          echo "Node version:"
+          node --version
+          echo "NPM version:"
+          npm --version
+          echo "Current directory:"
           pwd
+          echo "Directory contents:"
           ls -la
 
       - name: Install Dependencies
         run: |
-          npm ci
-          cd server && npm ci
+          echo "Installing root dependencies..."
+          rm -f package-lock.json
+          npm install
+          echo "Installing server dependencies..."
+          cd server && npm install
           cd ..
 
-      - name: Debug Build Directory
-        run: |
-          ls -la
-          cat package.json
-
       - name: Build Frontend
-        run: CI=false npm run build
+        run: |
+          echo "Starting build process..."
+          CI=false GENERATE_SOURCEMAP=false npm run build
+          echo "Build complete. Checking build directory..."
+          ls -la build || echo "Build directory not found"
         env:
           REACT_APP_SERVER_URL: https://reapers-whispers-backend.onrender.com
           REACT_APP_SOCKET_URL: wss://reapers-whispers-backend.onrender.com
 
-      - name: Debug Build Output
-        run: |
-          ls -la build || echo "Build directory not found"
-
       - name: Deploy to Netlify
-        uses: nwtgck/actions-netlify@v2.0
-        with:
-          publish-dir: './build'
-          production-branch: main
-          deploy-message: "Deploy from GitHub Actions"
-          enable-pull-request-comment: false
-          enable-commit-comment: false
-          overwrites-pull-request-comment: false
+        uses: netlify/actions/cli@master
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        timeout-minutes: 1
+        with:
+          args: deploy --dir=build --prod --message "Deployed from GitHub Actions"
