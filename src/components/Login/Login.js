@@ -12,41 +12,88 @@ import styled, { keyframes } from 'styled-components';
 
 const pulseAnimation = keyframes`
   0% {
-    box-shadow: 0 0 0 0 rgba(114, 9, 183, 0.4);
+    box-shadow: 0 0 0 0 rgba(139, 0, 0, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(114, 9, 183, 0);
+    box-shadow: 0 0 0 10px rgba(139, 0, 0, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(114, 9, 183, 0);
+    box-shadow: 0 0 0 0 rgba(139, 0, 0, 0);
   }
 `;
 
 const StyledPaper = styled(Paper)`
-  padding: 2rem;
+  padding: 2.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2rem;
-  background-color: rgba(18, 15, 29, 0.9);
-  border-radius: 15px;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  gap: 1.5rem;
+  background-color: rgba(24, 24, 31, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  max-width: 400px;
+`;
+
+const StyledLogo = styled(Typography)`
+  color: #B22222;
+  font-family: 'Creepster', cursive;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+`;
+
+const StyledTextField = styled(TextField)`
+  & .MuiOutlinedInput-root {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    
+    & fieldset {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    &:hover fieldset {
+      border-color: rgba(178, 34, 34, 0.5);
+    }
+    
+    &.Mui-focused fieldset {
+      border-color: #B22222;
+    }
+  }
+  
+  & .MuiInputLabel-root {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  & .MuiOutlinedInput-input {
+    color: rgba(255, 255, 255, 0.9);
+  }
 `;
 
 const StyledButton = styled(Button)`
-  background: linear-gradient(45deg, #9c27b0 30%, #f50057 90%);
-  border-radius: 8px;
-  border: 0;
+  background-color: #B22222;
   color: white;
   height: 48px;
-  padding: 0 30px;
-  box-shadow: 0 3px 5px 2px rgba(156, 39, 176, .3);
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  text-transform: none;
   animation: ${pulseAnimation} 2s infinite;
   
   &:hover {
-    background: linear-gradient(45deg, #f50057 30%, #9c27b0 90%);
+    background-color: #8B0000;
+  }
+`;
+
+const StyledText = styled(Typography)`
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: color 0.3s ease;
+  
+  &:hover {
+    color: #B22222;
   }
 `;
 
@@ -68,26 +115,47 @@ function Login() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ height: '100vh', display: 'flex', alignItems: 'center' }}>
+    <Container 
+      maxWidth={false} 
+      sx={{ 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#000000',
+        backgroundImage: 'radial-gradient(circle at center, #1a1a1a 0%, #000000 100%)'
+      }}
+    >
       <StyledPaper elevation={3}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Reaper's Whispers
-        </Typography>
-        
-        <TextField
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <StyledLogo variant="h1">
+            👻 REAPER'S WHISPER
+          </StyledLogo>
+        </Box>
+
+        <StyledTextField
           fullWidth
-          label="Username"
+          label="Your Name"
           variant="outlined"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           sx={{ mb: 2 }}
         />
 
-        {isJoining ? (
+        {!isJoining ? (
           <>
-            <TextField
+            <StyledButton fullWidth onClick={handleCreateGame}>
+              Create Game
+            </StyledButton>
+            <StyledText onClick={() => setIsJoining(true)}>
+              HAVE A GAME CODE?
+            </StyledText>
+          </>
+        ) : (
+          <>
+            <StyledTextField
               fullWidth
-              label="Game Code"
+              label="Enter 6-character code"
               variant="outlined"
               value={gameId}
               onChange={(e) => setGameId(e.target.value.toUpperCase())}
@@ -96,26 +164,9 @@ function Login() {
             <StyledButton fullWidth onClick={handleJoinGame}>
               Join Game
             </StyledButton>
-            <Button 
-              variant="text" 
-              onClick={() => setIsJoining(false)}
-              sx={{ color: 'text.secondary' }}
-            >
-              Back
-            </Button>
-          </>
-        ) : (
-          <>
-            <StyledButton fullWidth onClick={handleCreateGame}>
-              Create Game
-            </StyledButton>
-            <Button 
-              variant="text" 
-              onClick={() => setIsJoining(true)}
-              sx={{ color: 'text.secondary' }}
-            >
-              Join Existing Game
-            </Button>
+            <StyledText onClick={() => setIsJoining(false)}>
+              Back to Create Game
+            </StyledText>
           </>
         )}
       </StyledPaper>
