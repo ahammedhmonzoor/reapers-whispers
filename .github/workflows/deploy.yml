@@ -18,22 +18,23 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: |
+          npm install
+          cd server && npm install
+          cd ..
 
-      - name: Build
+      - name: Build Frontend
         run: npm run build
         env:
           REACT_APP_SERVER_URL: https://reapers-whispers-backend.onrender.com
           REACT_APP_SOCKET_URL: wss://reapers-whispers-backend.onrender.com
 
       - name: Deploy to Netlify
-        uses: netlify/actions/cli@master
-        env:
+        uses: jsmrcaga/action-netlify-deploy@v2.0.0
+        with:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        with:
-          args: deploy --dir=build --prod
-          secrets: '["NETLIFY_AUTH_TOKEN", "NETLIFY_SITE_ID"]'
+          NETLIFY_DEPLOY_TO_PROD: true
+          build_directory: build

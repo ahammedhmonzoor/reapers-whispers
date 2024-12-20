@@ -19,14 +19,16 @@ import {
   DialogActions,
   Menu,
   MenuItem,
-  ListItemSecondaryAction,
 } from '@mui/material';
+import PersonIcon from '@mui/icons-material/Person';
+import StarIcon from '@mui/icons-material/Star';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import BlockIcon from '@mui/icons-material/Block';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import styled, { keyframes } from 'styled-components';
-import CrownIcon from '@mui/icons-material/Crown';
 import SendIcon from '@mui/icons-material/Send';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 const mazeFormation = keyframes`
   0% {
@@ -205,22 +207,18 @@ const Lobby = () => {
                 <ListItem key={player.id}>
                   {player.isHost && (
                     <ListItemIcon>
-                      <CrownIcon sx={{ color: 'primary.main' }} />
+                      <StarIcon sx={{ color: 'primary.main' }} />
                     </ListItemIcon>
                   )}
-                  <ListItemText 
-                    primary={player.name} 
-                    secondary={bannedPlayers.includes(player.id) ? '(Banned)' : null}
-                  />
+                  <ListItemText primary={player.name} />
                   {!player.isHost && (
-                    <ListItemSecondaryAction>
-                      <IconButton 
-                        edge="end" 
-                        onClick={(e) => handlePlayerMenuOpen(e, player)}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
+                    <IconButton
+                      edge="end"
+                      aria-label="player actions"
+                      onClick={(e) => handlePlayerMenuOpen(e, player)}
+                    >
+                      <MoreVertIcon />
+                    </IconButton>
                   )}
                 </ListItem>
               ))}
