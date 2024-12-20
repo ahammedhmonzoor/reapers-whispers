@@ -6,20 +6,39 @@ const cors = require('cors');
 const { generatePuzzle } = require('./utils/puzzleGenerator');
 
 const app = express();
-app.use(cors());
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://reapers-whispers.netlify.app'
+  ],
+  methods: ['GET', 'POST'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
+    origin: [
+      'http://localhost:3000',
+      'https://reapers-whispers.netlify.app'
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
 // In-memory storage
 const activeGames = new Map();
 const bannedPlayers = new Map();
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
