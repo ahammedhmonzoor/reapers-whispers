@@ -1,46 +1,72 @@
 # Reaper's Whispers
 
-A multiplayer word-based maze game combining strategy, quick thinking, and competitive sabotage. Players navigate a dynamic labyrinth by solving word puzzles, avoiding traps, and outsmarting opponents to reach the center of the maze first.
+A multiplayer word maze game where players navigate through a mysterious maze, solving word puzzles and competing against each other.
+
+## Live Demo
+
+Frontend: [https://reapers-whispers.netlify.app](https://reapers-whispers.netlify.app)
+Backend: [https://reapers-whispers-backend.onrender.com](https://reapers-whispers-backend.onrender.com)
 
 ## Features
 
-- Multiplayer maze navigation with word puzzles
-- Real-time player interaction and sabotage mechanics
-- Dynamic maze generation
-- Power-ups and trap system
-- Live chat functionality
-- Competitive leaderboard
+- Real-time multiplayer gameplay
+- Dynamic word puzzle generation
+- Player moderation (kick, ban, mute)
+- Chat system
+- Power-ups and sabotages
 
 ## Tech Stack
 
-- Frontend: React.js with Material-UI and Styled Components
-- Backend: Node.js with Express
-- Real-time Communication: Socket.IO
-- Database: MongoDB
-- Deployment: Render/Heroku
+- Frontend: React, Material-UI, Socket.IO Client
+- Backend: Node.js, Express, Socket.IO
+- Deployment: Netlify (Frontend), Render (Backend)
 
-## Getting Started
+## Development
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/reapers-whispers.git
+cd reapers-whispers
+```
 
-2. Start the development server:
-   ```bash
-   npm start
-   ```
+2. Install dependencies:
+```bash
+# Install frontend dependencies
+npm install
 
-3. Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+# Install backend dependencies
+cd server
+npm install
+```
 
-## Game Rules
+3. Create .env files:
+```bash
+# Frontend (.env)
+REACT_APP_SERVER_URL=http://localhost:4001
 
-- Players must solve word puzzles to progress through the maze
-- Each puzzle has a 10-second time limit
-- Collect power-ups and set traps for opponents
-- First player to reach the center wins
-- Multiple themes and difficulty levels available
+# Backend (.env)
+PORT=4001
+CLIENT_URL=http://localhost:3000
+```
+
+4. Start the development servers:
+```bash
+# Start frontend
+npm start
+
+# Start backend
+cd server
+npm start
+```
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+MIT License
